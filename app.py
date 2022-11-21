@@ -136,6 +136,27 @@ def get_usuario():
     return jsonify(usuario_schema)
 
 
+@app.route('/post')
+def get_post():
+    post = db.session.query(Post).all()
+    post_schema = PostSchema().dump(post, many=True )
+    return jsonify(post_schema)
+
+
+@app.route('/categoria')
+def get_categoria():
+    categoria = db.session.query(Categoria).all()
+    categoria_schema = CategoriaSchema().dump(categoria, many=True)
+    return jsonify(categoria_schema)
+
+
+@app.route('/roles')
+def get_rol():
+    rol = db.session.query(Rol).all()
+    rol_schema = RolSchema().dump(rol, many=True)
+    return jsonify(rol_schema)
+
+
 
 # @app.route('/login')
 # def login():
