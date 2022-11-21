@@ -32,7 +32,7 @@ ma = Marshmallow(app)
 class Usuario(db.Model):
     __tablename__ = 'usuario'
 
-    id = db.Column(db.Integer(), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False, unique=True)
     apellido = db.Column(db.String(50), nullable=False, unique=True)
     username = db.Column(db.String(50), nullable=False, unique=True)
@@ -44,33 +44,38 @@ class Usuario(db.Model):
 class Post(db.Model):
     __tablename__ = 'post'
 
-    id = db.Column(db.Integer(), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     titulo = db.Column(db.String(255), nullable=False, unique=True)
     contenido_breve = db.Column(db.String(511), nullable=False, unique=True)
     contenido = db.Column(db.String(50), nullable=False, unique=True)
     fecha_creacion = db.Column(db.DateTime(), nullable=False, unique=True)
     estado = db.Column(db.Boolean(True), nullable=False, unique=True)
-    usuario_id = db.Column(db.Integer(), nullable=False, unique=True)
-    categoria_id = db.Column(db.Integer(), nullable=False, unique=True)
+    usuario_id = db.Column(db.Integer(), nullable=False, unique=True, ForeignKey("usuario.id"))
+    categoria_id = db.Column(db.Integer(), nullable=False, unique=True, ForeignKey("categoria.id"))
+
+    usuario = db.relationship("Usuario")
+    categoria = db.relationship("Categoria")
 
 class Categoria(db.Model):
     __tablename__ = 'categoria'
 
-    id = db.Column(db.Integer(), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(255), nullable=False, unique=True)
 
 class Rol(db.Model):
     __tablename__ = 'rol'
 
-    id = db.Column(db.Integer(), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     rol_nombre = db.Column(db.String(255), nullable=False, unique=True)
 
 class Usuario_rol(db.Model):
     __tablename__ = 'usuario_rol'
 
-    id = db.Column(db.Integer(), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     usuario_id = db.Column(db.Integer(), nullable=False, unique=True)
-    rol_id = db.Column(db.Integer(), nullable=False, unique=True)
+    rol_id = db.Column(db.Integer(), nullable=False, unique=True, ForeignKey("rol.id"))
+
+    rol = db.relationship("Rol")
 
 # class Pais(db.Model):
 #     __tablename__ = 'pais'
