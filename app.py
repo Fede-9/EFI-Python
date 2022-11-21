@@ -2,10 +2,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import hashlib
 # import jwt 
-
-
-
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request, session, render_template
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -13,27 +10,18 @@ from sqlalchemy import ForeignKey
 from marshmallow import fields
 
 
-
-
-
 # creamos la aplicacion
 app = Flask(__name__)
 
-
-
 #app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://usuario:contrasenia@host/nombreDB'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://BD2021:BD2021itec@143.198.156.171/sql_cometto'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://BD2021:BD2021itec@143.198.156.171/blog'
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost:3307/modelado'
 app.config['SECRET_KEY'] = "acapongoloquequiero"
-
-
-
 
 db = SQLAlchemy(app)
 
 # Creamos una instancia Miigrate que recibe la app y db
 migrate = Migrate(app, db)
-
 ma = Marshmallow(app)
 
 
@@ -41,97 +29,140 @@ ma = Marshmallow(app)
 
 #MODELADO DE LA BASE
 
-class Pais(db.Model):
-    __tablename__ = 'pais'
-
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(50), nullable=False, unique=True)
-
-    """
-    SI NO SE ESTABLECE UN INIT CADA VEZ QUE SE GENERE EL OBJETO DEBERAN 
-    ESTABLECER QUE PARAMETRO ES CADA UNO, DE LO CONTRARIO EL PRIMER PARAMETRO
-    SERA CONSIDERADO COMO ID
-    """
-    def __init__(self):
-        return self.nombre
-
-
-class Provincia(db.Model):
-    __tablename__ = 'provincia'
-
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(50), nullable=False, unique=True)
-    idPais = db.Column(db.Integer, ForeignKey("pais.id"))
-
-    pais = db.relationship("Pais")
-    
-
-class Localidad(db.Model):
-    __tablename__ = 'localidad'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(50), nullable=False, unique=True)
-    idProvincia = db.Column(db.Integer, ForeignKey("provincia.id"))
-    provincia = db.relationship("Provincia")
-
-
-class Sexo(db.Model):
-    __tablename__ = 'sexo'
-
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(50), nullable=False)
-
-
-class Tipodni(db.Model):
-    __tablename__ = 'tipodni'
-
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(50), nullable=False)
-
-
-class Tipousuario(db.Model):
-    __tablename__ = 'tipousuario'
-
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(50), nullable=False)
-    descripcion = db.Column(db.String(50), nullable=False)
-
-
 class Usuario(db.Model):
     __tablename__ = 'usuario'
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer(), primary_key=True)
     nombre = db.Column(db.String(50), nullable=False, unique=True)
-    contrasenia = db.Column(db.String(50), nullable=False)
-    idTipousuario = db.Column(db.Integer, ForeignKey("tipousuario.id"))
-    fechaCarga = db.Column(db.String(50), nullable=False)
-    idPersona = db.Column(db.Integer, ForeignKey("persona.id"))
+    apellido = db.Column(db.String(50), nullable=False, unique=True)
+    username = db.Column(db.String(50), nullable=False, unique=True)
+    email = db.Column(db.String(255), nullable=False, unique=True)
+    password = db.Column(db.String(60), nullable=False, unique=True)
+    estado = db.Column(db.Boolean(True), nullable=False, unique=True)
+    fecha_creacion = db.Column(db.DateTime(), nullable=False, unique=True)
 
-    tipousuario = db.relationship("Tipousuario")
-    persona = db.relationship("Persona")
+class Post(db.Model):
+    __tablename__ = 'post'
+
+    id = db.Column(db.Integer(), primary_key=True)
+    titulo = db.Column(db.String(255), nullable=False, unique=True)
+    contenido_breve = db.Column(db.String(511), nullable=False, unique=True)
+    contenido = db.Column(db.String(50), nullable=False, unique=True)
+    fecha_creacion = db.Column(db.DateTime(), nullable=False, unique=True)
+    estado = db.Column(db.Boolean(True), nullable=False, unique=True)
+    usuario_id = db.Column(db.Integer(), nullable=False, unique=True)
+    categoria_id = db.Column(db.Integer(), nullable=False, unique=True)
+
+class Categoria(db.Model):
+    __tablename__ = 'categoria'
+
+    id = db.Column(db.Integer(), primary_key=True)
+    nombre = db.Column(db.String(255), nullable=False, unique=True)
+
+class Rol(db.Model):
+    __tablename__ = 'rol'
+
+    id = db.Column(db.Integer(), primary_key=True)
+    rol_nombre = db.Column(db.String(255), nullable=False, unique=True)
+
+class Usuario_rol(db.Model):
+    __tablename__ = 'usuario_rol'
+
+    id = db.Column(db.Integer(), primary_key=True)
+    usuario_id = db.Column(db.Integer(), nullable=False, unique=True)
+    rol_id = db.Column(db.Integer(), nullable=False, unique=True)
+
+# class Pais(db.Model):
+#     __tablename__ = 'pais'
+
+#     id = db.Column(db.Integer, primary_key=True)
+#     nombre = db.Column(db.String(50), nullable=False, unique=True)
+
+#     """
+#     SI NO SE ESTABLECE UN INIT CADA VEZ QUE SE GENERE EL OBJETO DEBERAN 
+#     ESTABLECER QUE PARAMETRO ES CADA UNO, DE LO CONTRARIO EL PRIMER PARAMETRO
+#     SERA CONSIDERADO COMO ID
+#     """
+#     def __init__(self):
+#         return self.nombre
+
+
+# class Provincia(db.Model):
+#     __tablename__ = 'provincia'
+
+#     id = db.Column(db.Integer, primary_key=True)
+#     nombre = db.Column(db.String(50), nullable=False, unique=True)
+#     idPais = db.Column(db.Integer, ForeignKey("pais.id"))
+
+#     pais = db.relationship("Pais")
     
 
-class Persona(db.Model):
-    __tablename__ = 'persona'
+# class Localidad(db.Model):
+#     __tablename__ = 'localidad'
+    
+#     id = db.Column(db.Integer, primary_key=True)
+#     nombre = db.Column(db.String(50), nullable=False, unique=True)
+#     idProvincia = db.Column(db.Integer, ForeignKey("provincia.id"))
+#     provincia = db.relationship("Provincia")
 
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(50), nullable=False)
-    idTipodni = db.Column(db.Integer, ForeignKey("tipodni.id"), nullable=False)
-    dni = db.Column(db.String(20), nullable=False, unique=True)
-    direccion = db.Column(db.String(50), nullable=False)
-    idLocalidad = db.Column(db.Integer, ForeignKey("localidad.id"), nullable=False)
-    idPais = db.Column(db.Integer, ForeignKey("pais.id"), nullable=False)
-    fechaNacimiento = db.Column(db.String(50), nullable=False)
-    idSexo = db.Column(db.Integer, ForeignKey("sexo.id"), nullable=False)
-    telefono = db.Column(db.String(50), nullable=False, unique=True)
-    email = db.Column(db.String(50), nullable=False, unique=True)
-    fechaCarga = db.Column(db.String(50), nullable=False)
-    activo = db.Column(db.Boolean(), nullable=False)
 
-    tipodni = db.relationship("Tipodni")
-    localidad = db.relationship("Localidad")
-    pais = db.relationship("Pais")
-    sexo = db.relationship("Sexo")
+# class Sexo(db.Model):
+#     __tablename__ = 'sexo'
+
+#     id = db.Column(db.Integer, primary_key=True)
+#     nombre = db.Column(db.String(50), nullable=False)
+
+
+# class Tipodni(db.Model):
+#     __tablename__ = 'tipodni'
+
+#     id = db.Column(db.Integer, primary_key=True)
+#     nombre = db.Column(db.String(50), nullable=False)
+
+
+# class Tipousuario(db.Model):
+#     __tablename__ = 'tipousuario'
+
+#     id = db.Column(db.Integer, primary_key=True)
+#     nombre = db.Column(db.String(50), nullable=False)
+#     descripcion = db.Column(db.String(50), nullable=False)
+
+
+# class Usuario(db.Model):
+#     __tablename__ = 'usuario'
+
+#     id = db.Column(db.Integer, primary_key=True)
+#     nombre = db.Column(db.String(50), nullable=False, unique=True)
+#     contrasenia = db.Column(db.String(50), nullable=False)
+#     idTipousuario = db.Column(db.Integer, ForeignKey("tipousuario.id"))
+#     fechaCarga = db.Column(db.String(50), nullable=False)
+#     idPersona = db.Column(db.Integer, ForeignKey("persona.id"))
+
+#     tipousuario = db.relationship("Tipousuario")
+#     persona = db.relationship("Persona")
+    
+
+# class Persona(db.Model):
+#     __tablename__ = 'persona'
+
+#     id = db.Column(db.Integer, primary_key=True)
+#     nombre = db.Column(db.String(50), nullable=False)
+#     idTipodni = db.Column(db.Integer, ForeignKey("tipodni.id"), nullable=False)
+#     dni = db.Column(db.String(20), nullable=False, unique=True)
+#     direccion = db.Column(db.String(50), nullable=False)
+#     idLocalidad = db.Column(db.Integer, ForeignKey("localidad.id"), nullable=False)
+#     idPais = db.Column(db.Integer, ForeignKey("pais.id"), nullable=False)
+#     fechaNacimiento = db.Column(db.String(50), nullable=False)
+#     idSexo = db.Column(db.Integer, ForeignKey("sexo.id"), nullable=False)
+#     telefono = db.Column(db.String(50), nullable=False, unique=True)
+#     email = db.Column(db.String(50), nullable=False, unique=True)
+#     fechaCarga = db.Column(db.String(50), nullable=False)
+#     activo = db.Column(db.Boolean(), nullable=False)
+
+#     tipodni = db.relationship("Tipodni")
+#     localidad = db.relationship("Localidad")
+#     pais = db.relationship("Pais")
+#     sexo = db.relationship("Sexo")
 
 
 
@@ -201,14 +232,15 @@ class TipoUsuarioSerializer(ma.Schema):
     nombre = fields.String()
     descripcion = fields.String()
 
-
-
-
-
-
-
 # ------ RUTAS --------
 # sino determinamos el metodo es un get
+@app.route('/login')
+def login():
+    return render_template(
+        "login.html"
+    )
+
+
 @app.route('/paises')
 def get_paises():
     pais = db.session.query(Pais).all()
