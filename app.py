@@ -16,7 +16,7 @@ app = Flask(__name__)
 #app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://usuario:contrasenia@host/nombreDB'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://BD2021:BD2021itec@143.198.156.171/blog'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = "acapongoloquequiero"
+# app.config['SECRET_KEY'] = "acapongoloquequiero"
 
 db = SQLAlchemy(app)
 
@@ -38,8 +38,8 @@ class Usuario(db.Model):
     username = db.Column(db.String(50), nullable=False, unique=True)
     email = db.Column(db.String(255), nullable=False, unique=True)
     password = db.Column(db.String(60), nullable=False, unique=True)
-    estado = db.Column(db.Boolean(True), nullable=False, unique=True)
-    fecha_creacion = db.Column(db.DateTime(), nullable=False, unique=True)
+    estado = db.Column(db.Boolean(), nullable=False)
+    fecha_creacion = db.Column(db.String(50), nullable=False)
 
 
 class Post(db.Model):
@@ -132,8 +132,49 @@ class UsuarioRolSchema(ma.Schema):
 @app.route('/usuarios')
 def get_usuario():
     usuario = db.session.query(Usuario).all()
+    if len(usuario) == 0:
+         return jsonify(dict(Mensaje = "No existen Usuarios")), 400
     usuario_schema = UsuarioSchema().dump(usuario, many=True)
-    return jsonify(usuario_schema)
+    return jsonify(dict(Usuarios = usuario_schema)), 200
+
+
+@app.route('/usuarios', methods=['POST'])
+def add_usuario():
+    if request.method == 'POST':
+        data = request.json
+        print('ENTRA AL PPOST')
+        nombre = data['nombre']
+        apellido = data['apellido']
+        username = data['username']
+        email = data['email']
+        password = data['password'].encode('utf-8')
+        estado = data['estado']
+        # fecha_creacion = dato['fecha_creacion']
+
+        contra_hash = hashlib.md5(password).hexdigest()
+
+        try:
+            nuevo_usuario = Usuario(
+                nombre=nombre, 
+                apellido=apellido,
+                username=username,
+                email=email,
+                password=contra_hash, 
+                estado=estado,
+                fecha_creacion=datetime.now()
+                
+            )
+            db.session.add(nuevo_usuario)
+            db.session.commit()
+
+            resultado = UsuarioSchema().dump(nuevo_usuario)
+
+            if resultado:
+                return jsonify(dict(NuevoUsuario=resultado))
+
+        except:
+            return jsonify(dict(Error = 'No es posible generar el usuario')), 201
+            
 
 
 @app.route('/post')
@@ -141,6 +182,43 @@ def get_post():
     post = db.session.query(Post).all()
     post_schema = PostSchema().dump(post, many=True )
     return jsonify(post_schema)
+
+
+@app.route('/post', methods=['POST'])
+def add_post():
+     if request.method == 'POST':
+        data = request.json
+        titulo = data['titulo']
+        contenido_breve = data['contenido_breve']
+        contenido = data['contenido']
+        #  fecha_creacion = data['fecha_creacion']
+        estado = data['estado']
+        usuario_id = data['usuario_id']
+        categoria_id = data['categoria_id']
+
+        try:
+            nuevo_post = Post(
+                titulo=titulo, 
+                contenido_breve=contenido_breve,
+                contenido=contenido,
+                fecha_creacion=datetime.now(),
+                estado=estado,
+                usuario_id=usuario_id,
+                categoria_id=categoria_id
+                
+            )
+            db.session.add(nuevo_post)
+            db.session.commit()
+
+            resultado = PostSchema().dump(nuevo_post)
+
+            if resultado:
+                return jsonify(dict(NuevoPost=resultado))
+
+        except:
+            return jsonify(dict(Error = 'No es posible generar el post')), 201
+
+
 
 
 @app.route('/categoria')
