@@ -39,7 +39,7 @@ class Usuario(db.Model):
     email = db.Column(db.String(255), nullable=False, unique=True)
     password = db.Column(db.String(60), nullable=False, unique=True)
     estado = db.Column(db.Boolean(), nullable=False)
-    fecha_creacion = db.Column(db.String(50), nullable=False)
+    fecha_creacion = db.Column(db.DateTime(), nullable=False)
 
 
 class Post(db.Model):
@@ -228,11 +228,40 @@ def get_categoria():
     return jsonify(categoria_schema)
 
 
+@app.route('/categoria', methods=['POST'])
+def add_categoria():
+     if request.method == 'POST':
+        data = request.json
+        nombre = data['nombre']
+       
+        nueva_categoria = Categoria(nombre=nombre)
+        db.session.add(nueva_categoria)
+        db.session.commit()
+
+        resultado = CategoriaSchema().dump(nueva_categoria)
+        return jsonify(dict(NuevoCategoria=resultado))
+
+
+
 @app.route('/roles')
 def get_rol():
     rol = db.session.query(Rol).all()
     rol_schema = RolSchema().dump(rol, many=True)
     return jsonify(rol_schema)
+
+
+@app.route('/roles', methods=['POST'])
+def add_rol():
+    if request.method == 'POST':
+        data = request.json
+        rol_nombre = data['rol_nombre']
+
+        nuevo_rol = Rol(rol_nombre=rol_nombre)
+        db.session.add(nuevo_rol)
+        db.session.commit()
+
+        resultado = RolSchema().dump(nuevo_rol)
+        return jsonify(dict(NuevoRol=resultado))
 
 
 
