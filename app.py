@@ -2,7 +2,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import hashlib
 # import jwt 
-from flask import Flask, jsonify, request, session, render_template
+from flask import Flask, jsonify, request, session
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -33,24 +33,34 @@ class Usuario(db.Model):
     __tablename__ = 'usuario'
 
     id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(50), nullable=False, unique=True)
-    apellido = db.Column(db.String(50), nullable=False, unique=True)
+    nombre = db.Column(db.String(50), nullable=False)
+    apellido = db.Column(db.String(50), nullable=False)
     username = db.Column(db.String(50), nullable=False, unique=True)
     email = db.Column(db.String(255), nullable=False, unique=True)
     password = db.Column(db.String(60), nullable=False, unique=True)
     estado = db.Column(db.Boolean(), nullable=False)
     fecha_creacion = db.Column(db.DateTime(), nullable=False)
 
+    # para no pasar el id inicializamos las otras columnas
+    def __init__(self, nombre, apellido, username, email, password, estado, fecha_creacion):
+        self.nombre = nombre
+        self.apellido = apellido
+        self.username = username
+        self.email = email
+        self.password = password
+        self.estado = estado
+        self.fecha_creacion = fecha_creacion 
+
 
 class Post(db.Model):
     __tablename__ = 'post'
 
     id = db.Column(db.Integer, primary_key=True)
-    titulo = db.Column(db.String(255), nullable=False, unique=True)
-    contenido_breve = db.Column(db.String(511), nullable=False, unique=True)
-    contenido = db.Column(db.String(50), nullable=False, unique=True)
-    fecha_creacion = db.Column(db.DateTime(), nullable=False, unique=True)
-    estado = db.Column(db.Boolean(True), nullable=False, unique=True)
+    titulo = db.Column(db.String(255), nullable=False)
+    contenido_breve = db.Column(db.String(511), nullable=False)
+    contenido = db.Column(db.String(50), nullable=False)
+    fecha_creacion = db.Column(db.DateTime(), nullable=False)
+    estado = db.Column(db.Boolean(True), nullable=False)
     usuario_id = db.Column(db.Integer(), ForeignKey("usuario.id"))
     categoria_id = db.Column(db.Integer, ForeignKey("categoria.id"))
     
@@ -63,7 +73,7 @@ class Categoria(db.Model):
     __tablename__ = 'categoria'
 
     id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(255), nullable=False, unique=True)
+    nombre = db.Column(db.String(255), nullable=False)
 
 
 class Rol(db.Model):
@@ -77,9 +87,10 @@ class Usuario_rol(db.Model):
     __tablename__ = 'usuario_rol'
 
     id = db.Column(db.Integer, primary_key=True)
-    usuario_id = db.Column(db.Integer(), nullable=False, unique=True)
+    usuario_id = db.Column(db.Integer(), ForeignKey("usuario.id"))
     rol_id = db.Column(db.Integer, ForeignKey("rol.id"))
 
+    usuario = db.relationship("Usuario")
     rol = db.relationship("Rol")
 
 
@@ -184,6 +195,7 @@ def get_post():
     return jsonify(post_schema)
 
 
+
 @app.route('/post', methods=['POST'])
 def add_post():
      if request.method == 'POST':
@@ -240,6 +252,16 @@ def add_categoria():
 
         resultado = CategoriaSchema().dump(nueva_categoria)
         return jsonify(dict(NuevoCategoria=resultado))
+
+
+
+
+@app.route('/categoria/<id>', methods=['GET'])
+def delete_categoria(id):
+    categoria = db.session.query(Categoria).filter_by(id=id).first()
+    db.session.delete(categoria)
+    db.session.commit()
+        
 
 
 
