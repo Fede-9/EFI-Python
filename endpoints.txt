@@ -1,4 +1,4 @@
-('/countries')
+('/usuarios')
 get_countries():
 
 ('/countries', methods=['POST'])

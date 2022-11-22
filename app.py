@@ -1,7 +1,7 @@
 from functools import wraps
 from datetime import datetime, timedelta
 import hashlib
-# import jwt 
+import jwt 
 from flask import Flask, jsonify, request, session
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
@@ -382,104 +382,65 @@ def delete_rol(id):
 
 
 
-    
-# @app.route('/login')
-# def login():
-#     return render_template(
-#         "login.html"
-#     )
 
-
-# @app.route('/paises')
-# def get_paises():
-#     pais = db.session.query(Pais).all()
-#     pais_schema = PaisSerializer().dump(pais, many=True)
-#     return jsonify(pais_schema)
-
-# # aca usamos el post
-# @app.route('/paises', methods=['POST'])
-# def add_paises():
-#     if request.method == 'POST':
-#         data = request.json
-#         nombre = data['nombre']
-#         paises = db.session.query(Pais).all()
-#         for pais in paises:
-#             if nombre == pais.nombre:
-#                 return jsonify({'Mensaje':'Ya existe un pais con ese nombre'}),400
-#             nuevo_pais = Pais(nombre = nombre)
-#             db.session.add(nuevo_pais)
-#             db.session.commit()
-#             pais_schema = PaisSinIdSerializer().dump(nuevo_pais)
-#         return jsonify(
-#             {"Mensaje": "El pais se creo correctamente"},
-#             {"Pais": pais_schema}
-#         ), 201
-    
-
-# @app.route('/nombre_paises')
-# def get_nombre_paises():
-#     pais_schema = PaisSinIdSerializer().dump(
-#         db.session.query(Pais).all(), many=True
-#     )
-#     return jsonify(pais_schema)
-    
 
             
-# @app.route('/login', methods=['GET'])
-# def login():
-#     auth = request.authorization
-#     username = auth['username']
-#     password = auth['password'].encode('utf-8')
+@app.route('/login', methods=['GET'])
+def login():
+    auth = request.authorization
+    username = auth['username']
+    password = auth['password'].encode('utf-8')
 
 
 
-#     if not auth or not auth.username or not auth.password:
-#         return jsonify({"Error":"No se enviaron todos los parametros auth"}, 401)
+    if not auth or not auth.username or not auth.password:
+        return jsonify({"Error":"No se enviaron todos los parametros auth"}, 401)
 
-#     hasheada = hashlib.md5(password).hexdigest()
+    hasheada = hashlib.md5(password).hexdigest()
 
-#     user_login = db.session.query(Usuario).filter_by(nombre=username).filter_by(contrasenia=hasheada).first()
+    user_login = db.session.query(Usuario).filter_by(nombre=username).filter_by(contrasenia=hasheada).first()
     
 
-#     if user_login:
-#         token = jwt.encode(
-#             {
-#                 "usuario": username, 
-#                 "id_usuario": user_login.id,
-#                 "exp": datetime.utcnow() + timedelta(minutes=5)
-#             },
-#             app.secret_key
-#         )
-#         session['api_session_token'] = token
+    if user_login:
+        token = jwt.encode(
+            {
+                "usuario": username, 
+                "id_usuario": user_login.id,
+                "exp": datetime.utcnow() + timedelta(minutes=5)
+            },
+            app.secret_key
+        )
+        session['api_session_token'] = token
    
-#         return jsonify({"Token": token.decode("UTF-8")})
+        return jsonify({"Token": token.decode("UTF-8")})
     
-#     return jsonify({"Error":"Algun dato no coincide"}, 401)
+    return jsonify({"Error":"Algun dato no coincide"}, 401)
 
 
-# # ------- TOKEN ------
-# def token_required(f):
-#     @wraps(f)
-#     def decorated(*args, **kwargs):
-#         token = None
-#         if 'x-access-token' in request.headers:
-#             token = request.headers['x-access-token']
+# ------- TOKEN ------
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
 
-#         if not token:
-#             return jsonify({"ERROR":"Token is missing"}),401
+        if not token:
+            return jsonify({"ERROR":"Token is missing"}),401
 
-#         try: 
-#             datatoken = jwt.decode(token, app.secret_key)
-#             print(datatoken)
-#             userLogged = Usuario.query.filter_by(id=datatoken['id_usuario']).first()
-#         except:
-#             return jsonify(
-#                 {"ERROR": "Token is invalid or expired"}
-#             ),401
+        try: 
+            datatoken = jwt.decode(token, app.secret_key)
+            print(datatoken)
+            userLogged = Usuario.query.filter_by(id=datatoken['id_usuario']).first()
+        except:
+            return jsonify(
+                {"ERROR": "Token is invalid or expired"}
+            ),401
 
-#         return f(userLogged, *args, **kwargs)
+        return f(userLogged, *args, **kwargs)
 
-#     return decorated
+    return decorated
+
 
 
 # @app.route('/provincias')
