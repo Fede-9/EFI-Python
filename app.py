@@ -185,7 +185,39 @@ def add_usuario():
 
         except:
             return jsonify(dict(Error = 'No es posible generar el usuario')), 201
-            
+
+        
+@app.route('/usuarios/<id>', methods=['PUT'])
+def update_usuario(id):
+    if request.method == 'PUT':
+        data = request.json
+        nombre = data['nombre']
+        apellido = data['apellido']
+        username = data['username']
+        email = data['email']
+       
+        usuario = db.session.query(Usuario).filter_by(id=id).first()
+        usuario.nombre = nombre
+        usuario.apellido = apellido
+        usuario.username = username
+        usuario.email = email
+        db.session.commit()
+
+        return '¡¡¡ Usuarioo actualizado correctamenteeee !!!'
+    
+
+@app.route('/usuarios/<id>', methods=['DELETE'])
+def delete_usuario(id):
+    if request.method == 'DELETE':
+        try:
+            usuario = db.session.query(Usuario).filter_by(id=id).first()
+            db.session.delete(usuario)
+            db.session.commit()
+
+            return jsonify({"Usuario eliminado": usuario.nombre})
+        
+        except:
+            return "No se puede eliminar el Usuario porque esta relacionado a un post"
 
 
 @app.route('/post')
@@ -193,7 +225,6 @@ def get_post():
     post = db.session.query(Post).all()
     post_schema = PostSchema().dump(post, many=True )
     return jsonify(post_schema)
-
 
 
 @app.route('/post', methods=['POST'])
@@ -230,7 +261,36 @@ def add_post():
         except:
             return jsonify(dict(Error = 'No es posible generar el post')), 201
 
+        
+@app.route('/post/<id>', methods=['PUT'])
+def update_post(id):
+    if request.method == 'PUT':
+        data = request.json
+        titulo = data['titulo']
+        contenido_breve = data['contenido_breve']
+        contenido = data['contenido']
+        usuario_id = data['usuario_id']
+        categoria_id = data['categoria_id']
+       
+        post = db.session.query(Post).filter_by(id=id).first()
+        post.titulo = titulo
+        post.contenido_breve = contenido_breve
+        post.contenido = contenido
+        post.usuario_id = usuario_id
+        post.categoria_id = categoria_id
+        db.session.commit()
 
+        return 'Post actualizado correctamenteeee!!!'
+    
+
+@app.route('/post/<id>', methods=['DELETE'])
+def delete_post(id):
+    if request.method == 'DELETE':
+        post = db.session.query(Post).filter_by(id=id).first()
+        db.session.delete(post)
+        db.session.commit()
+        
+        return jsonify({"Post Eliminado": post.titulo})
 
 
 @app.route('/categoria')
@@ -254,15 +314,28 @@ def add_categoria():
         return jsonify(dict(NuevoCategoria=resultado))
 
 
+@app.route('/categoria/<id>', methods=['PUT'])
+def update_categoria(id):
+    if request.method == 'PUT':
+        data = request.json
+        nombre = data['nombre']
+       
+        categoria = db.session.query(Categoria).filter_by(id=id).first()
+        categoria.nombre = nombre
+        db.session.commit()
 
+        return 'Categoria actualizada correctamente!!!'
 
-@app.route('/categoria/<id>', methods=['GET'])
-def delete_categoria(id):
-    categoria = db.session.query(Categoria).filter_by(id=id).first()
-    db.session.delete(categoria)
-    db.session.commit()
-        
+     
+@app.route('/categoria/<id>', methods=['DELETE'])
+def delete_persona(id):
+            if request.method == 'DELETE':
+                categoria = db.session.query(Categoria).filter_by(id=id).first()
+                # print(categoria.id)
+                db.session.delete(categoria)
+                db.session.commit()
 
+                return jsonify({"Categoria Eliminada": categoria.nombre})
 
 
 @app.route('/roles')
@@ -286,7 +359,30 @@ def add_rol():
         return jsonify(dict(NuevoRol=resultado))
 
 
+@app.route('/roles/<id>', methods=['PUT'])
+def update_rol(id):
+    if request.method == 'PUT':
+        data = request.json
+        nombre = data['rol_nombre']
+       
+        rol = db.session.query(Rol).filter_by(id=id).first()
+        rol.rol_nombre = nombre
+        db.session.commit()
 
+        return 'Rol actualizado correctamente!!!'
+
+@app.route('/roles/<id>', methods=['DELETE'])
+def delete_rol(id):
+    if request.method == 'DELETE':
+            rol = db.session.query(Rol).filter_by(id=id).first()
+            db.session.delete(rol)
+            db.session.commit()
+
+            return jsonify({"Rol Eliminado": rol.rol_nombre})
+
+
+
+    
 # @app.route('/login')
 # def login():
 #     return render_template(
@@ -328,97 +424,7 @@ def add_rol():
 #     return jsonify(pais_schema)
     
 
-
-# @app.route('/personas')
-# def persona():
-# # ------------- PAGINADO ------------
-# # El paginado recibe 2 parametros principales: PAGINA (pag) Y CANTIDAD (can)
-# # Y un tercer parametro obligatorio que es el error_out que se puede setear como vacio
-
-#     try:
-#         can = int(request.args.get('can'))
-#         pag = int(request.args.get('pag'))
-#         persona = Persona.query.paginate(pag, can, error_out='No se obtienen valores').items
-#     except:
-#         persona = db.session.query(Persona).all()
-#         pag = 1
-#         can = 'Todos'
-
-
-#     persona_schema = PersonaSerializer().dump(persona, many=True)
-#     return jsonify(dict(
-#         pagina = pag,
-#         cantidad = can,
-#         resultado = persona_schema,
-#         )
-#     )
-   
-
-
-# @app.route('/localidades')
-# def localidad():
-#     localidad = db.session.query(Localidad).all()
-#     localidad_schema = LocalidadSerializer().dump(localidad, many=True)
-#     return jsonify(localidad_schema)
-
-
-# @app.route('/sexos')
-# def sexo():
-#     sexo = db.session.query(Sexo).all()
-#     sexo_schema = SexoSerializer().dump(sexo, many=True)
-#     return jsonify(sexo_schema)
-
-
-# @app.route('/tipos_dni')
-# def tipoDni():
-#     tipodni = db.session.query(Tipodni).all()
-#     tipodni_schema = TipoDniSerializer().dump(tipodni, many=True)
-#     return jsonify(tipodni_schema)
-
-
-# @app.route('/usuarios')
-# def get_usuario():
-#     usuario = db.session.query(Usuario).all()
-#     if len(usuario) == 0:
-#         return jsonify(dict(Mensaje = "No existen Usuarios")), 400
-#     usuario_schema = UsuarioSerializer().dump(usuario, many=True)
-#     return jsonify(dict(Usuarios = usuario_schema )), 200
-
-
-# @app.route('/usuarios', methods=['POST'])
-# def add_usuario():
-#     if request.method == 'POST':
-#         data = request.json
-#         print('ENTRA AL PPOST')
-#         nombre = data['nombre']
-#         contrasenia = data['contrasenia'].encode('utf-8')
-#         idTipousuario = data['idTipousuario']
-#         # fechaCarga = data['fechaCarga']
-#         idPersona = data['idPersona']
-
-#         contra_hash = hashlib.md5(contrasenia).hexdigest()
-
-#         try:
-#             nuevo_usuario = Usuario(
-#                 nombre=nombre, 
-#                 contrasenia=contra_hash, 
-#                 idTipousuario=idTipousuario, 
-#                 fechaCarga=datetime.now(), 
-#                 idPersona=idPersona
-#             )
-#             db.session.add(nuevo_usuario)
-#             db.session.commit()
-
-#             resultado = UsuarioSerializer().dump(nuevo_usuario)
-
-#             if resultado:
-#                 return jsonify(dict(NuevoUsuario=resultado))
-
-#         except:
-#             return jsonify(dict(Error = 'No es posible generar el usuario')), 201
             
-
-
 # @app.route('/login', methods=['GET'])
 # def login():
 #     auth = request.authorization
@@ -485,37 +491,6 @@ def add_rol():
 #         return jsonify(provincia_schema)
 #     else:
 #         return jsonify({"Error":"Usted no tiene permiso!!"})
-
-
-# @app.route('/provincias', methods=['POST'])
-# def add_provincia():
-#     if request.method == 'POST':
-#         data = request.json
-#         nombre = data['nombre']
-#         idPais = data['idPais']
-#         try:
-#             nueva_provincia = Provincia(idPais=idPais, nombre=nombre)
-#             db.session.add(nueva_provincia)
-#             db.session.commit()
-
-#             provincia_schema = ProvinciaSerializer().dump(nueva_provincia)
-
-#             return jsonify(
-#                 {"Mensaje": "La provincia se creo correctamente"},
-#                 {"Pais": provincia_schema}
-#             ), 201
-
-#         except:
-#             return jsonify(
-#                 {"Mensaje": "Algo salio mal, valide los datos"},
-#             ), 404
-
-
-# @app.route('/tipos_usuario')
-# def tipoUsuario():
-#     tipousuario = db.session.query(Tipousuario).all()
-#     tipousuario_schema = TipoUsuarioSerializer().dump(tipousuario, many=True)
-#     return jsonify(tipousuario_schema)
 
 
 
