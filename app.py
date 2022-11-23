@@ -2,7 +2,7 @@ from functools import wraps
 from datetime import datetime, timedelta
 import hashlib
 import jwt 
-from flask import Flask, jsonify, request, session
+from flask import Flask, jsonify, request, session, make_response
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
@@ -16,7 +16,7 @@ app = Flask(__name__)
 #app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://usuario:contrasenia@host/nombreDB'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://BD2021:BD2021itec@143.198.156.171/blog'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# app.config['SECRET_KEY'] = "acapongoloquequiero"
+app.config['SECRET_KEY'] = "acapongoloquequiero"
 
 db = SQLAlchemy(app)
 
@@ -137,11 +137,35 @@ class UsuarioRolSchema(ma.Schema):
 
 
 
+# ------- TOKEN ------
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
+
+        if not token:
+            return jsonify({"ERROR":"Token is missing"}),401
+
+        try: 
+            data = jwt.decode(token, app.secret_key, algorithms=["HS256"])
+            # userLogged = Usuario.query.filter_by(id=data['nombre']).first()
+        except:
+            return jsonify({"ERROR": "Token is invalid or expired"}), 401
+
+        return f(data, *args, **kwargs)
+
+    return decorated
+
+
 
 # ---------- RUTAS -------------
 
 @app.route('/usuarios')
-def get_usuario():
+@token_required
+def get_usuario(data):
     usuario = db.session.query(Usuario).all()
     if len(usuario) == 0:
          return jsonify(dict(Mensaje = "No existen Usuarios")), 400
@@ -380,67 +404,29 @@ def delete_rol(id):
 
             return jsonify({"Rol Eliminado": rol.rol_nombre})
 
-
-
-
-
-            
-@app.route('/login', methods=['GET'])
+@app.route('/login')
 def login():
     auth = request.authorization
+
     username = auth['username']
-    password = auth['password'].encode('utf-8')
+    # password = auth['password'].encode('utf-8')
 
+    if not auth or not auth.username:
+        return make_response("Could not verify",401, {"WWW-Authnticate":"Basic realm='Login required!'"})
 
+    # hasheada = hashlib.md5(password).hexdigest()
 
-    if not auth or not auth.username or not auth.password:
-        return jsonify({"Error":"No se enviaron todos los parametros auth"}, 401)
-
-    hasheada = hashlib.md5(password).hexdigest()
-
-    user_login = db.session.query(Usuario).filter_by(nombre=username).filter_by(contrasenia=hasheada).first()
+    user = db.session.query(Usuario).filter_by(username=username).first()
+    nombre = str(user.nombre)
     
+    if not username:
+        return make_response("Could not verify",401, {"WWW-Authnticate":"Basic realm='Login required!'"})
 
-    if user_login:
-        token = jwt.encode(
-            {
-                "usuario": username, 
-                "id_usuario": user_login.id,
-                "exp": datetime.utcnow() + timedelta(minutes=5)
-            },
-            app.secret_key
-        )
-        session['api_session_token'] = token
-   
-        return jsonify({"Token": token.decode("UTF-8")})
+    if nombre:
+        token = jwt.encode({"nombre": nombre},app.secret_key)
+        return jsonify({"token": token})
     
-    return jsonify({"Error":"Algun dato no coincide"}, 401)
-
-
-# ------- TOKEN ------
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = None
-        if 'x-access-token' in request.headers:
-            token = request.headers['x-access-token']
-
-        if not token:
-            return jsonify({"ERROR":"Token is missing"}),401
-
-        try: 
-            datatoken = jwt.decode(token, app.secret_key)
-            print(datatoken)
-            userLogged = Usuario.query.filter_by(id=datatoken['id_usuario']).first()
-        except:
-            return jsonify(
-                {"ERROR": "Token is invalid or expired"}
-            ),401
-
-        return f(userLogged, *args, **kwargs)
-
-    return decorated
-
+    return jsonify({"Could not verify"}, 401, {"WWW-Authnticate":"Basic realm='Login required!'"})
 
 
 # @app.route('/provincias')
