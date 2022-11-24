@@ -137,14 +137,44 @@ class UsuarioRolSchema(ma.Schema):
 
 
 
+    # ------ LOGIN -------
+    
+@app.route('/login')
+def login():
+    auth = request.authorization
+
+    username = auth['username']
+    password = auth['password'].encode('utf-8')
+
+    if not auth or not auth.username or not auth.password:
+        return make_response("Could not verify",401, {"WWW-Authnticate":"Basic realm='Login required!'"})
+
+    # hasheada = hashlib.md5(password).hexdigest()
+
+    user = db.session.query(Usuario).filter_by(nombre=username).filter_by(password=password).first()
+    nombre = user.nombre
+    contraseña = user.password
+    user_id = user.id
+    print(user_id)
+    
+    if not username and not password and not user_id:
+        return make_response("Could not verify",401, {"WWW-Authnticate":"Basic realm='Login required!'"})
+
+    if nombre and password and user_id:
+        token = jwt.encode({"nombre": nombre, "contraseña": contraseña, "user_id":user_id},app.secret_key)
+        return jsonify({"token": token})
+    
+    return jsonify({"Could not verify"}, 401, {"WWW-Authnticate":"Basic realm='Login required!'"})
+
+
 # ------- TOKEN ------
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
 
-        if 'x-access-token' in request.headers:
-            token = request.headers['x-access-token']
+        if 'access-token' in request.headers:
+            token = request.headers['access-token']
 
         if not token:
             return jsonify({"ERROR":"Token is missing"}),401
@@ -166,55 +196,63 @@ def token_required(f):
 @app.route('/usuarios')
 @token_required
 def get_usuario(userLogged):
-    usuario = db.session.query(Usuario).all()
-    if len(usuario) == 0:
-         return jsonify(dict(Mensaje = "No existen Usuarios")), 400
-    usuario_schema = UsuarioSchema().dump(usuario, many=True)
-    return jsonify(dict(Usuarios = usuario_schema)), 200
+    if userLogged.id == 1:
+        usuario = db.session.query(Usuario).all()
+        if len(usuario) == 0:
+            return jsonify(dict(Mensaje = "No existen Usuarios")), 400
+        usuario_schema = UsuarioSchema().dump(usuario, many=True)
+        return jsonify(dict(Usuarios = usuario_schema)), 200
+    else:
+        print(userLogged.id)
+        return jsonify({"Error": "Ustede no tiene acceso!!"})
+
 
 
 @app.route('/usuarios', methods=['POST'])
 @token_required
 def add_usuario(userLogged):
-    if request.method == 'POST':
-        data = request.json
-        print('ENTRA AL PPOST')
-        nombre = data['nombre']
-        apellido = data['apellido']
-        username = data['username']
-        email = data['email']
-        password = data['password'].encode('utf-8')
-        estado = data['estado']
-        # fecha_creacion = dato['fecha_creacion']
+    if userLogged.id == 1:
 
-        contra_hash = hashlib.md5(password).hexdigest()
+        if request.method == 'POST':
+            data = request.json
+            print('ENTRA AL PPOST')
+            nombre = data['nombre']
+            apellido = data['apellido']
+            username = data['username']
+            email = data['email']
+            password = data['password'].encode('utf-8')
+            estado = data['estado']
+            # fecha_creacion = dato['fecha_creacion']
 
-        try:
-            nuevo_usuario = Usuario(
-                nombre=nombre, 
-                apellido=apellido,
-                username=username,
-                email=email,
-                password=contra_hash, 
-                estado=estado,
-                fecha_creacion=datetime.now()
-                
-            )
-            db.session.add(nuevo_usuario)
-            db.session.commit()
+            contra_hash = hashlib.md5(password).hexdigest()
 
-            resultado = UsuarioSchema().dump(nuevo_usuario)
+            try:
+                nuevo_usuario = Usuario(
+                    nombre=nombre, 
+                    apellido=apellido,
+                    username=username,
+                    email=email,
+                    password=contra_hash, 
+                    estado=estado,
+                    fecha_creacion=datetime.now()
+                    
+                )
+                db.session.add(nuevo_usuario)
+                db.session.commit()
 
-            if resultado:
-                return jsonify(dict(NuevoUsuario=resultado))
+                resultado = UsuarioSchema().dump(nuevo_usuario)
 
-        except:
-            return jsonify(dict(Error = 'No es posible generar el usuario')), 201
+                if resultado:
+                    return jsonify(dict(NuevoUsuario=resultado))
+
+            except:
+                return jsonify(dict(Error = 'No es posible generar el usuario')), 201
+    else:
+        return jsonify({"Error": "Usted no puede crear un nuevo usuario!!!"})
 
         
 @app.route('/usuarios/<id>', methods=['PUT'])
-@token_required
-def update_usuario(id, userLogged):
+def update_usuario(id):
     if request.method == 'PUT':
         data = request.json
         nombre = data['nombre']
@@ -234,65 +272,73 @@ def update_usuario(id, userLogged):
 
 @app.route('/usuarios/<id>', methods=['DELETE'])
 @token_required
-def delete_usuario(id, userLogged):
-    if request.method == 'DELETE':
-        try:
-            usuario = db.session.query(Usuario).filter_by(id=id).first()
-            db.session.delete(usuario)
-            db.session.commit()
+def delete_usuario(id):
+        if request.method == 'DELETE':
+            try:
+                usuario = db.session.query(Usuario).filter_by(id=id).first()
+                db.session.delete(usuario)
+                db.session.commit()
 
-            return jsonify({"Usuario eliminado": usuario.nombre})
-        
-        except:
-            return "No se puede eliminar el Usuario porque esta relacionado a un post"
+                return jsonify({"Usuario eliminado": usuario.nombre})
+            
+            except:
+                return "No se puede eliminar el Usuario porque esta relacionado a un post"
+
+
 
 
 @app.route('/post')
-def get_post():
-    post = db.session.query(Post).all()
-    post_schema = PostSchema().dump(post, many=True )
-    return jsonify(post_schema)
+@token_required
+def get_post(userLogged):
+    if userLogged.id == 1 or userLogged.id == 2:
+        post = db.session.query(Post).all()
+        post_schema = PostSchema().dump(post, many=True )
+        return jsonify(post_schema)
+    else:
+        return jsonify({"Error": "Usted no tiene permiso para mirar los Post"})
 
 
 @app.route('/post', methods=['POST'])
 @token_required
 def add_post(userLogged):
-     if request.method == 'POST':
-        data = request.json
-        titulo = data['titulo']
-        contenido_breve = data['contenido_breve']
-        contenido = data['contenido']
-        #  fecha_creacion = data['fecha_creacion']
-        estado = data['estado']
-        usuario_id = data['usuario_id']
-        categoria_id = data['categoria_id']
+    if userLogged.id == 1 or userLogged.id == 2:
+        if request.method == 'POST':
+            data = request.json
+            titulo = data['titulo']
+            contenido_breve = data['contenido_breve']
+            contenido = data['contenido']
+            #  fecha_creacion = data['fecha_creacion']
+            estado = data['estado']
+            usuario_id = data['usuario_id']
+            categoria_id = data['categoria_id']
 
-        try:
-            nuevo_post = Post(
-                titulo=titulo, 
-                contenido_breve=contenido_breve,
-                contenido=contenido,
-                fecha_creacion=datetime.now(),
-                estado=estado,
-                usuario_id=usuario_id,
-                categoria_id=categoria_id
-                
-            )
-            db.session.add(nuevo_post)
-            db.session.commit()
+            try:
+                nuevo_post = Post(
+                    titulo=titulo, 
+                    contenido_breve=contenido_breve,
+                    contenido=contenido,
+                    fecha_creacion=datetime.now(),
+                    estado=estado,
+                    usuario_id=usuario_id,
+                    categoria_id=categoria_id
+                    
+                )
+                db.session.add(nuevo_post)
+                db.session.commit()
 
-            resultado = PostSchema().dump(nuevo_post)
+                resultado = PostSchema().dump(nuevo_post)
 
-            if resultado:
-                return jsonify(dict(NuevoPost=resultado))
+                if resultado:
+                    return jsonify(dict(NuevoPost=resultado))
 
-        except:
-            return jsonify(dict(Error = 'No es posible generar el post')), 201
+            except:
+                return jsonify(dict(Error = 'No es posible generar el post')), 201
+    else:
+        return jsonify({"Error": "Ustede no tiene permiso para agregar un post !!"})
 
         
 @app.route('/post/<id>', methods=['PUT'])
-@token_required
-def update_post(id, userLogged):
+def update_post(id):
     if request.method == 'PUT':
         data = request.json
         titulo = data['titulo']
@@ -313,7 +359,6 @@ def update_post(id, userLogged):
     
 
 @app.route('/post/<id>', methods=['DELETE'])
-@token_required
 def delete_post(id):
     if request.method == 'DELETE':
         post = db.session.query(Post).filter_by(id=id).first()
@@ -324,24 +369,33 @@ def delete_post(id):
 
 
 @app.route('/categoria')
-def get_categoria():
-    categoria = db.session.query(Categoria).all()
-    categoria_schema = CategoriaSchema().dump(categoria, many=True)
-    return jsonify(categoria_schema)
+@token_required
+def get_categoria(userLogged):
+    if userLogged.id == 3:
+        categoria = db.session.query(Categoria).all()
+        categoria_schema = CategoriaSchema().dump(categoria, many=True)
+        return jsonify(categoria_schema)
+    else:
+        return jsonify({"Error":"Usted no tiene permiso para ver las categorias!!"})
 
 
 @app.route('/categoria', methods=['POST'])
-def add_categoria():
-     if request.method == 'POST':
-        data = request.json
-        nombre = data['nombre']
-       
-        nueva_categoria = Categoria(nombre=nombre)
-        db.session.add(nueva_categoria)
-        db.session.commit()
+@token_required
+def add_categoria(userLogged):
+    if userLogged.id == 3:
+        if request.method == 'POST':
+            data = request.json
+            nombre = data['nombre']
+        
+            nueva_categoria = Categoria(nombre=nombre)
+            db.session.add(nueva_categoria)
+            db.session.commit()
 
-        resultado = CategoriaSchema().dump(nueva_categoria)
-        return jsonify(dict(NuevoCategoria=resultado))
+            resultado = CategoriaSchema().dump(nueva_categoria)
+            return jsonify(dict(NuevoCategoria=resultado))
+    else:
+        return jsonify({"Error": "Usted no tiene permiso para agregar una categoria!!"})
+    
 
 
 @app.route('/categoria/<id>', methods=['PUT'])
@@ -369,10 +423,14 @@ def delete_persona(id):
 
 
 @app.route('/roles')
-def get_rol():
-    rol = db.session.query(Rol).all()
-    rol_schema = RolSchema().dump(rol, many=True)
-    return jsonify(rol_schema)
+@token_required
+def get_rol(userLogged):
+    if userLogged.id == 1:
+        rol = db.session.query(Rol).all()
+        rol_schema = RolSchema().dump(rol, many=True)
+        return jsonify(rol_schema)
+    else:
+        return jsonify({"Error":"Usted no tiene permiso para ver los roles!!"})
 
 
 @app.route('/roles', methods=['POST'])
@@ -410,32 +468,9 @@ def delete_rol(id):
 
             return jsonify({"Rol Eliminado": rol.rol_nombre})
 
-@app.route('/login')
-def login():
-    auth = request.authorization
-
-    username = auth['username']
-    password = auth['password'].encode('utf-8')
-
-    if not auth or not auth.username or not auth.password:
-        return make_response("Could not verify",401, {"WWW-Authnticate":"Basic realm='Login required!'"})
-
-    # hasheada = hashlib.md5(password).hexdigest()
-
-    user = db.session.query(Usuario).filter_by(nombre=username).filter_by(password=password).first()
-    nombre = user.nombre
-    contraseña = user.password
-    user_id = user.id
-    print(user_id)
     
-    if not username and not password and not user_id:
-        return make_response("Could not verify",401, {"WWW-Authnticate":"Basic realm='Login required!'"})
 
-    if nombre and password and user_id:
-        token = jwt.encode({"nombre": nombre, "contraseña": contraseña, "user_id":user_id},app.secret_key)
-        return jsonify({"token": token})
-    
-    return jsonify({"Could not verify"}, 401, {"WWW-Authnticate":"Basic realm='Login required!'"})
+
 
 
 
