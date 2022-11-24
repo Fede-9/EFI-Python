@@ -151,11 +151,11 @@ def token_required(f):
 
         try: 
             data = jwt.decode(token, app.secret_key, algorithms=["HS256"])
-            # userLogged = Usuario.query.filter_by(id=data['nombre']).first()
+            userLogged = Usuario.query.filter_by(id=data['user_id']).first()
         except:
             return jsonify({"ERROR": "Token is invalid or expired"}), 401
 
-        return f(data, *args, **kwargs)
+        return f(userLogged, *args, **kwargs)
 
     return decorated
 
@@ -165,7 +165,7 @@ def token_required(f):
 
 @app.route('/usuarios')
 @token_required
-def get_usuario(data):
+def get_usuario(userLogged):
     usuario = db.session.query(Usuario).all()
     if len(usuario) == 0:
          return jsonify(dict(Mensaje = "No existen Usuarios")), 400
@@ -174,7 +174,8 @@ def get_usuario(data):
 
 
 @app.route('/usuarios', methods=['POST'])
-def add_usuario():
+@token_required
+def add_usuario(userLogged):
     if request.method == 'POST':
         data = request.json
         print('ENTRA AL PPOST')
@@ -212,7 +213,8 @@ def add_usuario():
 
         
 @app.route('/usuarios/<id>', methods=['PUT'])
-def update_usuario(id):
+@token_required
+def update_usuario(id, userLogged):
     if request.method == 'PUT':
         data = request.json
         nombre = data['nombre']
@@ -231,7 +233,8 @@ def update_usuario(id):
     
 
 @app.route('/usuarios/<id>', methods=['DELETE'])
-def delete_usuario(id):
+@token_required
+def delete_usuario(id, userLogged):
     if request.method == 'DELETE':
         try:
             usuario = db.session.query(Usuario).filter_by(id=id).first()
@@ -252,7 +255,8 @@ def get_post():
 
 
 @app.route('/post', methods=['POST'])
-def add_post():
+@token_required
+def add_post(userLogged):
      if request.method == 'POST':
         data = request.json
         titulo = data['titulo']
@@ -287,7 +291,8 @@ def add_post():
 
         
 @app.route('/post/<id>', methods=['PUT'])
-def update_post(id):
+@token_required
+def update_post(id, userLogged):
     if request.method == 'PUT':
         data = request.json
         titulo = data['titulo']
@@ -308,13 +313,14 @@ def update_post(id):
     
 
 @app.route('/post/<id>', methods=['DELETE'])
+@token_required
 def delete_post(id):
     if request.method == 'DELETE':
         post = db.session.query(Post).filter_by(id=id).first()
         db.session.delete(post)
         db.session.commit()
         
-        return jsonify({"Post Eliminado": post.titulo})
+    return jsonify({"Post Eliminado": post.titulo})
 
 
 @app.route('/categoria')
@@ -409,37 +415,27 @@ def login():
     auth = request.authorization
 
     username = auth['username']
-    # password = auth['password'].encode('utf-8')
+    password = auth['password'].encode('utf-8')
 
-    if not auth or not auth.username:
+    if not auth or not auth.username or not auth.password:
         return make_response("Could not verify",401, {"WWW-Authnticate":"Basic realm='Login required!'"})
 
     # hasheada = hashlib.md5(password).hexdigest()
 
-    user = db.session.query(Usuario).filter_by(username=username).first()
-    nombre = str(user.nombre)
+    user = db.session.query(Usuario).filter_by(nombre=username).filter_by(password=password).first()
+    nombre = user.nombre
+    contraseña = user.password
+    user_id = user.id
+    print(user_id)
     
-    if not username:
+    if not username and not password and not user_id:
         return make_response("Could not verify",401, {"WWW-Authnticate":"Basic realm='Login required!'"})
 
-    if nombre:
-        token = jwt.encode({"nombre": nombre},app.secret_key)
+    if nombre and password and user_id:
+        token = jwt.encode({"nombre": nombre, "contraseña": contraseña, "user_id":user_id},app.secret_key)
         return jsonify({"token": token})
     
     return jsonify({"Could not verify"}, 401, {"WWW-Authnticate":"Basic realm='Login required!'"})
-
-
-# @app.route('/provincias')
-# @token_required
-# def get_provincias(userLogged):
-#     if userLogged.idTipousuario == 2:
-#         provincia = db.session.query(Provincia).all()
-#         provincia_schema = ProvinciaSerializer().dump(provincia, many=True)
-#         return jsonify(provincia_schema)
-#     else:
-#         return jsonify({"Error":"Usted no tiene permiso!!"})
-
-
 
 
 
